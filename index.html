@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pit Wall — 2026 F1 strategy simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:wght@400;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef0f4; --panel:#ffffff; --panel-2:#f5f6f9; --line:#d9dde5; --text:#12151c; --muted:#5d6577;
+  --accent:#e10600; --good:#0f9d58; --bad:#d32f2f; --soft:#e10600; --medium:#f2b705; --hard:#f4f4f1; --hard-edge:#9aa1ad;
+  --grid:#e3e6ec; --user:#12151c; --base:#8a93a6;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0b0e14; --panel:#121722; --panel-2:#171d2a; --line:#242c3b; --text:#e9ebef; --muted:#8a93a6;
+    --accent:#e10600; --good:#2fd27a; --bad:#ff5a52; --soft:#e10600; --medium:#ffd12e; --hard:#f0f0ec; --hard-edge:#f0f0ec;
+    --grid:#1d2433; --user:#e9ebef; --base:#6b7488;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0b0e14; --panel:#121722; --panel-2:#171d2a; --line:#242c3b; --text:#e9ebef; --muted:#8a93a6;
+  --accent:#e10600; --good:#2fd27a; --bad:#ff5a52; --soft:#e10600; --medium:#ffd12e; --hard:#f0f0ec; --hard-edge:#f0f0ec;
+  --grid:#1d2433; --user:#e9ebef; --base:#6b7488;
+  color-scheme:dark;
+}
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*,*::before,*::after{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--text);font-family:"Titillium Web",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 18px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;padding-bottom:16px;border-bottom:3px solid var(--accent);margin-bottom:18px}
+.brand{display:flex;align-items:baseline;gap:14px}
+.brand h1{margin:0;font-size:34px;font-weight:900;letter-spacing:-.01em;line-height:1;font-style:italic}
+.brand span{color:var(--muted);font-size:15px}
+.snapshot{font-size:13px;color:var(--muted);max-width:560px}
+.snapshot b{color:var(--text);font-weight:600}
+.grid{display:grid;grid-template-columns:minmax(300px,380px) 1fr;gap:18px;align-items:start}
+@media (max-width:800px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.panel + .panel{margin-top:14px}
+.panel h2{margin:0 0 2px;font-size:17px;font-weight:700}
+.help{margin:0 0 12px;color:var(--muted);font-size:13px}
+.seg{display:grid;gap:6px}
+.seg.cols3{grid-template-columns:repeat(3,1fr)}
+.opt{border:1px solid var(--line);background:var(--panel-2);border-radius:4px;padding:8px 10px;text-align:left;cursor:pointer;min-height:44px}
+.opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.opt .t{font-weight:700;display:block;line-height:1.2}
+.opt .s{font-size:12px;color:var(--muted)}
+.drv{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.badge{font-size:12px;font-weight:700;padding:1px 7px;border-radius:3px;border:1px solid var(--line);white-space:nowrap}
+.badge.lo{color:var(--good);border-color:var(--good)}
+.badge.hi{color:var(--bad);border-color:var(--bad)}
+.chip{display:inline-block;width:14px;height:14px;border-radius:50%;border:3px solid;vertical-align:-2px;margin-right:6px;background:transparent}
+.chip.S{border-color:var(--soft)} .chip.M{border-color:var(--medium)} .chip.H{border-color:var(--hard);box-shadow:0 0 0 1px var(--hard-edge)}
+table.cmp{width:100%;border-collapse:collapse;font-size:13px}
+table.cmp th,table.cmp td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line)}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left}
+table.cmp th{font-weight:600;color:var(--muted)}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.row label{font-size:13px;color:var(--muted);min-width:64px}
+select{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:38px}
+input[type=number]{width:70px;background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:38px}
+input[type=range]{flex:1;accent-color:var(--accent);min-width:120px}
+.stint{border-left:3px solid var(--line);padding:6px 0 6px 10px;margin-bottom:8px}
+.err{color:var(--bad);font-size:13px;margin:6px 0 0}
+.warn{color:var(--medium);font-size:13px;margin:6px 0 0}
+:root:not([data-theme="dark"]) .warn{color:#9a6b00}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .warn{color:var(--medium)}}
+.btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:4px;padding:9px 14px;font-weight:700;cursor:pointer;min-height:40px}
+.btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+.btn:disabled{opacity:.5;cursor:default}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:6px 26px;align-items:end}
+@media (max-width:560px){.hero{grid-template-columns:1fr}}
+.delta{font-size:68px;font-weight:900;line-height:.9;letter-spacing:-.02em;font-style:italic}
+.delta.good{color:var(--good)} .delta.bad{color:var(--bad)} .delta.even{color:var(--muted)}
+.delta small{font-size:26px;font-style:normal;font-weight:700;margin-left:4px}
+.times{display:grid;grid-template-columns:auto auto;gap:2px 14px;font-size:14px;justify-content:start}
+.times dt{color:var(--muted)} .times dd{margin:0;font-weight:700}
+.verdict{margin:14px 0 0;font-size:16px;max-width:72ch}
+.chart-wrap{overflow-x:auto}
+svg{display:block;width:100%;height:auto}
+svg text{font-family:"Titillium Web",system-ui,sans-serif;fill:var(--muted);font-size:11px}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:6px}
+.legend i{display:inline-block;width:18px;height:0;border-top:2px solid;vertical-align:middle;margin-right:6px}
+.ctx p{margin:6px 0 0;font-size:14px;max-width:72ch}
+.ctx .meta{font-size:13px;color:var(--muted)}
+details{font-size:14px}
+details summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
+details ul{margin:8px 0 0;padding-left:18px;color:var(--muted)}
+details li{margin:3px 0}
+.ai{white-space:pre-wrap;font-size:14px;margin:10px 0 0;max-width:72ch}
+.sources{font-size:12px;color:var(--muted)}
+.sources a{color:var(--muted)}
+.trackcard{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.trackcard div{background:var(--panel-2);border:1px solid var(--line);border-radius:4px;padding:6px 8px}
+.trackcard b{display:block;font-size:15px;line-height:1.2}
+.trackcard span{font-size:12px;color:var(--muted)}
+.strip{display:grid;grid-template-columns:repeat(12,1fr);gap:3px}
+.rd{border:1px solid var(--line);background:var(--panel-2);border-radius:3px;font-size:12px;font-weight:600;padding:0;min-height:28px;cursor:pointer}
+.rd.up{border-style:dashed;color:var(--muted)}
+.rd[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+optgroup{font-weight:700}
+.best{margin-top:10px;font-size:14px;padding:10px;border:1px dashed var(--line);border-radius:4px}
+@media (prefers-reduced-motion:no-preference){.delta{transition:color .2s}}
+</style>
+</head>
+<body>
+<div id="root"><div class="wrap"><p>Loading the pit wall…</p></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+/* =====================================================================
+   CONFIG — every tunable number lives here.
+   Season facts (laps, compound allocations, 2026 results, standings) were
+   gathered from formula1.com, Pirelli press releases and team sites on
+   11 Nov 2026. Physics values (base pace, deg, cliffs, offsets) are MODEL
+   ESTIMATES calibrated so that each track's ordering of strategies matches
+   Pirelli's published pre-race expectations. Edit freely.
+   ===================================================================== */
+const CONFIG = {
+  snapshotDate: "11 November 2026",
+  fuelEffectStart: 2.5,      // s/lap slower on lap 1 from fuel load, falling linearly to 0 on the last lap
+  cliffMultiplier: 2.5,      // degradation rate multiplier once a stint passes its cliff lap
+  baselinePitFraction: 0.40, // baseline one-stop pits at 40% race distance (Medium → Hard)
+  compounds: { S: "Soft", M: "Medium", H: "Hard" },
+  season: "Antonelli clinched the 2026 title in Mexico City, where Verstappen won; Mercedes sealed the constructors’ crown in São Paulo on 8 November, where Norris won. Las Vegas, Qatar and Abu Dhabi remain.",
+  // Derivation of tyre physics from a track's wear severity (1 = very low, 5 = very high)
+  // and the actual C-number of each nominated compound. Used for every track without a hand-tuned override.
+  derive: { degBase: 0.006, degSevExp: 1.3, degPerSofterStep: 1.6, cliffBase: 150, cliffSevExp: 0.55, cliffPerSofterStep: 1.55, minCliff: 6, paceStepBase: 0.22, paceStepPerSev: 0.05 }
+};
+
+/* ---------------------------------------------------------------------
+   2026 CALENDAR — 23 rounds after Bahrain moved to Sepang and Saudi Arabia
+   was cancelled. laps, date, winner and (where marked "confirmed") compound
+   allocation are season facts gathered 11 Nov 2026. pitLoss, baseLap
+   (clean race pace) and sev (wear severity) are MODEL ESTIMATES.
+   allocStatus: "confirmed" = Pirelli/F1 announcement found;
+                "estimate"  = not found in snapshot, carried from the 2025 pattern.
+   --------------------------------------------------------------------- */
+const RAW_TRACKS = [
+  { id:"australia",   rd:1,  gp:"Australian GP",      circuit:"Albert Park",          laps:58, pitLoss:19.5, baseLap:83.3,  sev:2, alloc:["C3","C4","C5"], allocStatus:"estimate",  date:"8 Mar",  winner:"George Russell (Mercedes)" },
+  { id:"china",       rd:2,  gp:"Chinese GP",         circuit:"Shanghai",             laps:56, pitLoss:22.5, baseLap:96.3,  sev:3, alloc:["C2","C3","C4"], allocStatus:"confirmed", date:"15 Mar", winner:"Kimi Antonelli (Mercedes)", sprint:true },
+  { id:"japan",       rd:3,  gp:"Japanese GP",        circuit:"Suzuka",               laps:53, pitLoss:22.5, baseLap:97.0,  sev:5, alloc:["C1","C2","C3"], allocStatus:"confirmed", date:"29 Mar", winner:"Kimi Antonelli (Mercedes)" },
+  { id:"miami",       rd:4,  gp:"Miami GP",           circuit:"Miami Autodrome",      laps:57, pitLoss:21.0, baseLap:92.9,  sev:3, alloc:["C3","C4","C5"], allocStatus:"estimate",  date:"3 May",  winner:"Kimi Antonelli (Mercedes)", sprint:true },
+  { id:"canada",      rd:5,  gp:"Canadian GP",        circuit:"Gilles Villeneuve",    laps:70, pitLoss:18.5, baseLap:75.8,  sev:2, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"24 May", winner:"Kimi Antonelli (Mercedes)", sprint:true },
+  { id:"monaco",      rd:6,  gp:"Monaco GP",          circuit:"Monte Carlo",          laps:78, pitLoss:25.0, baseLap:75.5,  sev:1, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"7 Jun",  winner:"Kimi Antonelli (Mercedes)",
+    pitNote:"60 km/h pit-lane limit and a tight lane make stopping expensive",
+    override:{ offset:{S:0,M:0.30,H:0.60}, deg:{S:0.040,M:0.025,H:0.015}, cliff:{S:32,M:50,H:70} },
+    story:"Antonelli converted pole and led every one of the 78 laps. The mandatory two-stop rule used in 2025 was dropped, so a single stop was the expectation.",
+    pirelli:"For a clean race Pirelli rated Soft → Medium fastest, Soft → Hard a few seconds slower, then Medium → Hard. It also put the chance of a Safety Car at about 80%." },
+  { id:"barcelona",   rd:7,  gp:"Barcelona GP",       circuit:"Catalunya",            laps:66, pitLoss:22.0, baseLap:81.1,  sev:4, alloc:["C2","C3","C4"], allocStatus:"confirmed", date:"14 Jun", winner:"Lewis Hamilton (Ferrari)" },
+  { id:"austria",     rd:8,  gp:"Austrian GP",        circuit:"Red Bull Ring",        laps:71, pitLoss:20.5, baseLap:71.0,  sev:3, alloc:["C3","C4","C5"], allocStatus:"estimate",  date:"28 Jun", winner:"George Russell (Mercedes)" },
+  { id:"silverstone", rd:9,  gp:"British GP",         circuit:"Silverstone",          laps:52, pitLoss:21.5, baseLap:91.2,  sev:5, alloc:["C1","C2","C3"], allocStatus:"confirmed", date:"5 Jul",  winner:"Charles Leclerc (Ferrari)", sprint:true,
+    pitNote:"High-energy corners load the tyres hard",
+    override:{ offset:{S:0,M:0.50,H:1.00}, deg:{S:0.150,M:0.080,H:0.055}, cliff:{S:11,M:26,H:36} },
+    story:"All 22 cars started on the C2 Medium planning one stop, then switched to Hard. Two late neutralisations pushed everyone to at least two stops, and the race finished behind the Safety Car.",
+    pirelli:"Hardest allocation of the 2026 range. Sunday degradation ran higher than in practice because of warmer temperatures, prompting some early stops." },
+  { id:"belgium",     rd:10, gp:"Belgian GP",         circuit:"Spa-Francorchamps",    laps:44, pitLoss:20.0, baseLap:112.5, sev:4, alloc:["C2","C3","C4"], allocStatus:"estimate",  date:"19 Jul", winner:"Kimi Antonelli (Mercedes)" },
+  { id:"hungary",     rd:11, gp:"Hungarian GP",       circuit:"Hungaroring",          laps:70, pitLoss:21.0, baseLap:83.2,  sev:2, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"26 Jul", winner:"Lando Norris (McLaren)" },
+  { id:"netherlands", rd:12, gp:"Dutch GP",           circuit:"Zandvoort",            laps:72, pitLoss:21.5, baseLap:75.2,  sev:4, alloc:["C2","C3","C4"], allocStatus:"confirmed", date:"23 Aug", winner:"Lando Norris (McLaren)", sprint:true },
+  { id:"monza",       rd:13, gp:"Italian GP",         circuit:"Monza",                laps:53, pitLoss:22.0, baseLap:84.8,  sev:2, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"6 Sep",  winner:"Kimi Antonelli (Mercedes)",
+    pitNote:"Long pit lane: one of the season’s biggest time losses",
+    override:{ offset:{S:0,M:0.35,H:0.70}, deg:{S:0.085,M:0.050,H:0.030}, cliff:{S:15,M:28,H:42} },
+    story:"Antonelli won from 19th on the grid in a race red-flagged on lap 2 after Leclerc’s crash. Russell skipped the Virtual Safety Car stop his team-mate took and finished 3.9 s behind on the alternative strategy.",
+    pirelli:"Softest allocation of the 2026 range. Pirelli flagged the pit-lane loss as among the year’s highest, so teams stretch stints to stop once." },
+  { id:"madrid",      rd:14, gp:"Spanish GP",         circuit:"Madring",              laps:57, pitLoss:21.5, baseLap:96.6,  sev:3, alloc:["C2","C3","C4"], allocStatus:"confirmed", date:"13 Sep", winner:"Kimi Antonelli (Mercedes)" },
+  { id:"baku",        rd:15, gp:"Azerbaijan GP",      circuit:"Baku City",            laps:51, pitLoss:20.5, baseLap:105.9, sev:2, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"26 Sep", winner:"George Russell (Mercedes)" },
+  { id:"sepang",      rd:16, gp:"Bahrain GP (Sepang)",circuit:"Sepang, Malaysia",     laps:55, pitLoss:21.5, baseLap:99.0,  sev:5, alloc:["C2","C3","C4"], allocStatus:"confirmed", date:"4 Oct",  winner:"Max Verstappen (Red Bull)",
+    pirelli:"Relocated Bahrain round on an abrasive surface not resurfaced since 2017, so Pirelli went a step harder than the street races either side of it." },
+  { id:"singapore",   rd:17, gp:"Singapore GP",       circuit:"Marina Bay",           laps:62, pitLoss:27.5, baseLap:96.2,  sev:2, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"11 Oct", winner:"Max Verstappen (Red Bull)", sprint:true },
+  { id:"austin",      rd:18, gp:"United States GP",   circuit:"COTA",                 laps:56, pitLoss:21.5, baseLap:99.0,  sev:4, alloc:["C2","C3","C4"], allocStatus:"confirmed", date:"25 Oct", winner:null },
+  { id:"mexico",      rd:19, gp:"Mexico City GP",     circuit:"Hermanos Rodríguez",   laps:71, pitLoss:22.5, baseLap:80.3,  sev:2, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"1 Nov",  winner:"Max Verstappen (Red Bull)" },
+  { id:"brazil",      rd:20, gp:"São Paulo GP",       circuit:"Interlagos",           laps:71, pitLoss:21.0, baseLap:74.5,  sev:3, alloc:["C3","C4","C5"], allocStatus:"confirmed", date:"8 Nov",  winner:"Lando Norris (McLaren)",
+    story:"Norris won from pole in wet conditions on Intermediates, so the dry-tyre model here is a what-if." },
+  { id:"lasvegas",    rd:21, gp:"Las Vegas GP",       circuit:"Las Vegas Strip",      laps:50, pitLoss:21.0, baseLap:96.5,  sev:1, alloc:["C3","C4","C5"], allocStatus:"estimate",  date:"21 Nov", winner:null, upcoming:true },
+  { id:"qatar",       rd:22, gp:"Qatar GP",           circuit:"Lusail",               laps:57, pitLoss:25.5, baseLap:86.0,  sev:5, alloc:["C1","C2","C3"], allocStatus:"estimate",  date:"29 Nov", winner:null, upcoming:true },
+  { id:"abudhabi",    rd:23, gp:"Abu Dhabi GP",       circuit:"Yas Marina",           laps:58, pitLoss:21.5, baseLap:88.5,  sev:2, alloc:["C3","C4","C5"], allocStatus:"estimate",  date:"6 Dec",  winner:null, upcoming:true }
+];
+const WEAR = ["", "Very low wear", "Low wear", "Medium wear", "High wear", "Very high wear"];
+function deriveTrack(r){
+  const d = CONFIG.derive, k = { H:+r.alloc[0].slice(1), M:+r.alloc[1].slice(1), S:+r.alloc[2].slice(1) };
+  const step = d.paceStepBase + d.paceStepPerSev*r.sev, deg = {}, cliff = {};
+  ["S","M","H"].forEach(c => {
+    deg[c] = +(d.degBase*Math.pow(r.sev,d.degSevExp)*Math.pow(d.degPerSofterStep,k[c]-1)).toFixed(3);
+    cliff[c] = Math.max(d.minCliff, Math.round(d.cliffBase/(Math.pow(r.sev,d.cliffSevExp)*Math.pow(d.cliffPerSofterStep,k[c]-1))));
+  });
+  const offset = { S:0, M:+(step*(k.S-k.M)).toFixed(2), H:+(step*(k.S-k.H)).toFixed(2) };
+  const t = { ...r, name: r.circuit, wear: WEAR[r.sev], alloc:{ H:r.alloc[0], M:r.alloc[1], S:r.alloc[2] }, offset, deg, cliff, tuned:false };
+  if (r.override) Object.assign(t, r.override, { tuned:true });
+  return t;
+}
+CONFIG.tracks = Object.fromEntries(RAW_TRACKS.map(r => [r.id, deriveTrack(r)]));
+
+/* ---------------------------------------------------------------------
+   CURRENT GRID (22 seats, as of 11 Nov 2026). Ocon left Haas after Mexico;
+   Rafael Camara took the seat from São Paulo. Tyre-management multipliers
+   are ILLUSTRATIVE model profiles (1.00 = neutral), not measured data.
+   Adjust any driver live with the slider in the page.
+   --------------------------------------------------------------------- */
+const GRID = [
+  ["norris","Lando Norris",1,"McLaren",0.98,"Won the São Paulo GP"], ["piastri","Oscar Piastri",81,"McLaren",0.97,null],
+  ["russell","George Russell",63,"Mercedes",0.98,"P3 in the standings"], ["antonelli","Kimi Antonelli",12,"Mercedes",1.05,"2026 World Champion, 390 pts"],
+  ["verstappen","Max Verstappen",3,"Red Bull",1.00,"P2 in the standings"], ["hadjar","Isack Hadjar",6,"Red Bull",1.02,null],
+  ["leclerc","Charles Leclerc",16,"Ferrari",1.01,null], ["hamilton","Lewis Hamilton",44,"Ferrari",0.95,"P4 in the standings"],
+  ["sainz","Carlos Sainz",55,"Williams",0.98,null], ["albon","Alex Albon",23,"Williams",0.98,null],
+  ["lawson","Liam Lawson",30,"Racing Bulls",1.02,null], ["lindblad","Arvid Lindblad",41,"Racing Bulls",1.04,"Only full-season rookie of 2026"],
+  ["alonso","Fernando Alonso",14,"Aston Martin",0.96,null], ["stroll","Lance Stroll",18,"Aston Martin",1.01,null],
+  ["bearman","Oliver Bearman",87,"Haas",1.02,null], ["camara","Rafael Camara",null,"Haas",1.04,"Debuted in São Paulo, replacing Ocon"],
+  ["hulkenberg","Nico Hülkenberg",27,"Audi",0.98,null], ["bortoleto","Gabriel Bortoleto",5,"Audi",1.01,null],
+  ["gasly","Pierre Gasly",10,"Alpine",0.99,null], ["colapinto","Franco Colapinto",43,"Alpine",1.02,null],
+  ["perez","Sergio Pérez",11,"Cadillac",0.95,null], ["bottas","Valtteri Bottas",77,"Cadillac",0.98,null]
+];
+CONFIG.drivers = Object.fromEntries(GRID.map(([id,name,num,team,mult,standing]) => [id, { name, num, team, mult, standing }]));
+CONFIG.teams = [...new Set(GRID.map(g => g[3]))];
+CONFIG.sources = [
+  ["F1: 2026 race results", "https://www.formula1.com/en/results/2026/races"],
+  ["Pirelli: British GP 2026 race report", "https://press.pirelli.com/leclerc-paints-silverstone-red/"],
+  ["Pirelli: Monaco GP 2026 race report", "https://press.pirelli.com/kimi-antonelli-wins-the-monaco-grand-prix/"],
+  ["Pirelli: compounds for Austin, Mexico City, São Paulo", "https://press.pirelli.com/the-compound-selection-for-austin-mexico-city-and-so-paulo/&gsessionid=2ee5eYG93P90KZDnG7m0FUuKF3zsJUXrlpPVHPsttXoOABNhcoBAxg"],
+  ["Pirelli: compounds for Zandvoort, Monza, Madrid", "https://press.pirelli.com/tyre-compounds-selected-for-zandvoort-monza-and-madrid/"],
+  ["RacingNews365: Sepang compounds", "https://racingnews365.com/pirelli-make-key-decision-ahead-of-malaysia-f1-return?utm_source=bluesky&utm_campaign=pirelli-make-key-dec&utm_medium=social_organic&utm_content=14412195"],
+  ["Auto Action: compounds for the opening rounds", "https://autoaction.com.au/2025/12/23/pirelli-reveals-tyre-choices-for-2026-opening-rounds"],
+  ["F1 Las Vegas GP: 2026 driver list", "https://www.f1lasvegasgp.com/drivers/"],
+  ["F1: Camara to debut for Haas in São Paulo", "https://www.formula1.com/en/latest/article/f2-racer-camara-to-make-f1-debut-at-sao-paulo-grand-prix-as-haas-confirm-ocon-will-not-return.12Qa0tpaMZ9kgnEuGJBKFp"],
+  ["Speedweek: Bahrain GP moved to Sepang", "https://www.speedweek.com/en/a/formula-1/bahrain-gp-2026-sepang-malaysia"],
+  ["GPFans: standings after the 2026 Brazilian GP", "https://www.gpfans.com/en/f1-news/1092671/f1-standings-brazilian-grand-prix-hamilton-loses-ground-verstappen-mercedes-champions/"]
+];
+
+/* ============================ MODEL ============================ */
+const C_KEYS = ["S","M","H"];
+function degAt(track, c, age){ // age 1..n
+  const r = track.deg[c], k = track.cliff[c];
+  return age <= k ? r*age : r*k + r*CONFIG.cliffMultiplier*(age-k);
+}
+function fuelAt(track, lap){
+  const L = track.laps; return CONFIG.fuelEffectStart * (1 - (lap-1)/(L-1));
+}
+function buildStints(track, plan){
+  const L = track.laps, out = [];
+  for (let k=0;k<plan.compounds.length;k++){
+    const start = k===0 ? 1 : plan.pits[k-1]+1;
+    const end = k===plan.compounds.length-1 ? L : plan.pits[k];
+    out.push({ c: plan.compounds[k], start, end, len: end-start+1 });
+  }
+  return out;
+}
+function simulate(track, mult, plan){
+  const stints = buildStints(track, plan), laps = [];
+  let cum = 0;
+  stints.forEach((s, si) => {
+    for (let lap=s.start, age=1; lap<=s.end; lap++, age++){
+      const tyre = track.baseLap + track.offset[s.c] + fuelAt(track, lap) + degAt(track, s.c, age)*mult;
+      const pit = (si < stints.length-1 && lap === s.end) ? track.pitLoss : 0;
+      cum += tyre + pit;
+      laps.push({ lap, c: s.c, age, tyre, pit, time: tyre+pit, cum });
+    }
+  });
+  return { laps, stints, total: cum, stops: plan.pits.length };
+}
+function baselinePlan(track){
+  return { compounds: ["M","H"], pits: [Math.round(track.laps*CONFIG.baselinePitFraction)] };
+}
+function validate(track, plan){
+  const errs = [], L = track.laps;
+  plan.pits.forEach((p, i) => {
+    if (!Number.isInteger(p) || p < 1 || p >= L) errs.push(`Stop ${i+1} must be on a lap between 1 and ${L-1}.`);
+    if (i>0 && p <= plan.pits[i-1]) errs.push(`Stop ${i+1} must come after stop ${i} (lap ${plan.pits[i-1]}).`);
+  });
+  return errs;
+}
+// Fast optimiser: fuel and base pace don't depend on strategy, so only stint costs matter.
+function optimise(track, mult){
+  const L = track.laps, cost = {};
+  C_KEYS.forEach(c => { const a=[0]; for(let n=1;n<=L;n++) a[n]=a[n-1]+track.offset[c]+degAt(track,c,n)*mult; cost[c]=a; });
+  let best = null;
+  const consider = (plan, v) => { if(!best || v < best.v) best = { plan, v }; };
+  for (const a of C_KEYS) for (const b of C_KEYS){ if (a===b) continue;
+    for (let p=1;p<L;p++) consider({compounds:[a,b],pits:[p]}, cost[a][p]+cost[b][L-p]+track.pitLoss);
+  }
+  const best1 = best; best = null;
+  for (const a of C_KEYS) for (const b of C_KEYS) for (const c of C_KEYS){
+    if (a===b && b===c) continue;
+    for (let p1=1;p1<L-1;p1++) for (let p2=p1+1;p2<L;p2++)
+      consider({compounds:[a,b,c],pits:[p1,p2]}, cost[a][p1]+cost[b][p2-p1]+cost[c][L-p2]+2*track.pitLoss);
+  }
+  return { one: best1.plan, two: best.plan };
+}
+
+/* ============================ FORMAT ============================ */
+const fmtRace = s => { const h=Math.floor(s/3600), m=Math.floor(s%3600/60), r=(s%60); return `${h}:${String(m).padStart(2,"0")}:${r.toFixed(3).padStart(6,"0")}`; };
+const fmtLap = s => { const m=Math.floor(s/60); return `${m}:${(s-m*60).toFixed(3).padStart(6,"0")}`; };
+const fmtDelta = d => (Math.abs(d)<0.005 ? "±0.00" : (d>0?"+":"\u2212")+Math.abs(d).toFixed(2));
+const planLabel = (plan) => plan.compounds.map(c=>CONFIG.compounds[c]).join(" → ") + (plan.pits.length ? ` (lap${plan.pits.length>1?"s":""} ${plan.pits.join(", ")})` : "");
+
+function verdict(track, user, base){
+  const d = user.total - base.total, abs = Math.abs(d).toFixed(1);
+  const n = user.stops, word = n===1?"one-stop":"two-stop";
+  // Lap with the largest single-lap swing in the user's favour/against (excluding pit laps)
+  let swingLap = 1, swing = 0;
+  user.laps.forEach((l,i)=>{ const g = base.laps[i].tyre - l.tyre; if (Math.abs(g) > Math.abs(swing)) { swing = g; swingLap = l.lap; } });
+  const over = user.stints.filter(s => s.len > track.cliff[s.c]).map(s => `${CONFIG.compounds[s.c]} stint runs ${s.len - track.cliff[s.c]} laps past its cliff`);
+  let head;
+  if (Math.abs(d) < 0.05) head = `Your ${word} is dead level with the baseline.`;
+  else if (d < 0) head = `Your ${word} beats the baseline by ${abs} s.`;
+  else head = `Your ${word} loses ${abs} s to the baseline.`;
+  let why;
+  if (n > base.stops) why = d < 0
+    ? `The extra stop costs ${track.pitLoss.toFixed(1)} s, but fresher rubber earns it back; the biggest single-lap gain is ${Math.abs(swing).toFixed(2)} s on lap ${swingLap}.`
+    : `The extra ${track.pitLoss.toFixed(1)} s stop isn’t repaid: ${track.wear.toLowerCase()} here means fresh tyres gain too little per lap.`;
+  else why = d < 0
+    ? `Same number of stops, so the gain is compound choice and timing; the pace advantage peaks on lap ${swingLap} at ${Math.abs(swing).toFixed(2)} s.`
+    : `Same number of stops, but the compound mix or pit timing is off; the worst lap is ${swingLap}, ${Math.abs(swing).toFixed(2)} s slower.`;
+  return [head, why, over.length ? `Watch out: your ${over.join("; ")}.` : ""].filter(Boolean).join(" ");
+}
+
+/* ============================ UI ============================ */
+const { useState, useMemo, useEffect, useRef } = React;
+const html = htm.bind(React.createElement);
+
+function defaultPits(L, stops){ return stops===1 ? [Math.round(L*0.45)] : [Math.round(L*0.32), Math.round(L*0.66)]; }
+
+function Timeline({ track, rows }){
+  const W=640, rowH=26, padL=72, padR=10, top=6, axis=22, L=track.laps;
+  const H = top + rows.length*(rowH+10) + axis;
+  const x = lap => padL + (lap/L)*(W-padL-padR);
+  const fill = c => c==="S"?"var(--soft)":c==="M"?"var(--medium)":"var(--hard)";
+  const ink = c => c==="S"?"#fff":"#111";
+  const ticks=[]; for(let t=0;t<=L;t+=10) ticks.push(t); if (ticks[ticks.length-1]!==L) ticks.push(L);
+  return html`<svg viewBox=${`0 0 ${W} ${H}`} role="img" aria-label="Stint timeline">
+    <defs><pattern id="cliff" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="rgba(0,0,0,.35)"/></pattern></defs>
+    ${rows.map((r, ri) => { const y = top + ri*(rowH+10); return html`<g key=${r.label}>
+      <text x="0" y=${y+rowH/2+4} style=${{fill:"var(--text)",fontWeight:600,fontSize:"12px"}}>${r.label}</text>
+      ${r.stints.map((s,si)=>{ const x0=x(s.start-1), x1=x(s.end), cl=track.cliff[s.c];
+        return html`<g key=${si}>
+          <rect x=${x0+0.5} y=${y} width=${Math.max(1,x1-x0-1)} height=${rowH} rx="3" fill=${fill(s.c)} stroke="var(--hard-edge)" strokeWidth=${s.c==="H"?0.6:0}/>
+          ${s.len>cl ? html`<rect x=${x(s.start-1+cl)} y=${y} width=${Math.max(0,x1-x(s.start-1+cl)-1)} height=${rowH} fill="url(#cliff)"/>` : null}
+          ${x1-x0>34 ? html`<text x=${x0+6} y=${y+rowH/2+4} style=${{fill:ink(s.c),fontWeight:700}}>${s.c} ${track.alloc[s.c]} · ${s.len}L</text>` : null}
+        </g>`; })}
+      ${r.stints.slice(0,-1).map((s,si)=>html`<g key=${"p"+si}>
+        <line x1=${x(s.end)} x2=${x(s.end)} y1=${y-3} y2=${y+rowH+3} stroke="var(--accent)" strokeWidth="2"/>
+        <path d=${`M${x(s.end)-5},${y-8} L${x(s.end)+5},${y-8} L${x(s.end)},${y-2} Z`} fill="var(--accent)"/>
+      </g>`)}
+    </g>`; })}
+    ${ticks.map(t=>html`<g key=${"t"+t}><line x1=${x(t)} x2=${x(t)} y1=${H-axis} y2=${H-axis+4} stroke="var(--muted)"/><text x=${x(t)} y=${H-4} textAnchor="middle">${t}</text></g>`)}
+  </svg>`;
+}
+
+function PaceChart({ track, user, base, hover, setHover }){
+  const W=640, H=240, pl=48, pr=12, pt=12, pb=26, L=track.laps;
+  const all = user.laps.map(l=>l.tyre).concat(base.laps.map(l=>l.tyre));
+  let lo=Math.min(...all), hi=Math.max(...all); const pad=(hi-lo)*0.08||0.5; lo-=pad; hi+=pad;
+  const x = lap => pl + (lap-1)/(L-1)*(W-pl-pr);
+  const y = v => pt + (hi-v)/(hi-lo)*(H-pt-pb);
+  const path = arr => arr.map((l,i)=>`${i?"L":"M"}${x(l.lap).toFixed(1)},${y(l.tyre).toFixed(1)}`).join("");
+  const polys=[];
+  for(let i=0;i<L-1;i++){ const u0=user.laps[i].tyre,u1=user.laps[i+1].tyre,b0=base.laps[i].tyre,b1=base.laps[i+1].tyre;
+    const good = (u0+u1) < (b0+b1);
+    polys.push(html`<path key=${i} d=${`M${x(i+1)},${y(u0)}L${x(i+2)},${y(u1)}L${x(i+2)},${y(b1)}L${x(i+1)},${y(b0)}Z`} fill=${good?"var(--good)":"var(--bad)"} opacity="0.22"/>`); }
+  const yt=[]; for(let k=0;k<=4;k++) yt.push(lo+(hi-lo)*k/4);
+  const ref = useRef(null);
+  const move = e => { const r=ref.current.getBoundingClientRect(); const px=(e.clientX-r.left)/r.width*W; const lap=Math.round((px-pl)/(W-pl-pr)*(L-1))+1; setHover(Math.min(L,Math.max(1,lap))); };
+  const hv = hover ? { u:user.laps[hover-1], b:base.laps[hover-1] } : null;
+  return html`<svg ref=${ref} viewBox=${`0 0 ${W} ${H}`} role="img" aria-label="Per-lap tyre pace, your strategy against the baseline" onMouseMove=${move} onMouseLeave=${()=>setHover(null)} onTouchStart=${e=>move(e.touches[0])} onTouchMove=${e=>move(e.touches[0])}>
+    ${yt.map((v,k)=>html`<g key=${k}><line x1=${pl} x2=${W-pr} y1=${y(v)} y2=${y(v)} stroke="var(--grid)"/><text x=${pl-6} y=${y(v)+4} textAnchor="end">${fmtLap(v)}</text></g>`)}
+    ${polys}
+    ${user.stints.slice(0,-1).map((s,i)=>html`<line key=${"u"+i} x1=${x(s.end)} x2=${x(s.end)} y1=${pt} y2=${H-pb} stroke="var(--accent)" strokeDasharray="3 3"/>`)}
+    <path d=${path(base.laps)} fill="none" stroke="var(--base)" strokeWidth="1.6" strokeDasharray="5 4"/>
+    <path d=${path(user.laps)} fill="none" stroke="var(--user)" strokeWidth="2"/>
+    ${[...new Set([1,10,20,30,40,50,60,70].filter(t=>t<L).concat([L]))].map(t=>html`<text key=${"x"+t} x=${x(t)} y=${H-6} textAnchor="middle">${t}</text>`)}
+    ${hv ? html`<g>
+      <line x1=${x(hover)} x2=${x(hover)} y1=${pt} y2=${H-pb} stroke="var(--muted)"/>
+      <circle cx=${x(hover)} cy=${y(hv.u.tyre)} r="3.5" fill="var(--user)"/>
+      <circle cx=${x(hover)} cy=${y(hv.b.tyre)} r="3.5" fill="var(--base)"/>
+      <g transform=${`translate(${Math.min(x(hover)+8, W-pr-150)},${pt+4})`}>
+        <rect width="148" height="58" rx="3" fill="var(--panel)" stroke="var(--line)"/>
+        <text x="8" y="16" style=${{fill:"var(--text)",fontWeight:700}}>Lap ${hover} · ${CONFIG.compounds[hv.u.c]} age ${hv.u.age}</text>
+        <text x="8" y="32">You ${fmtLap(hv.u.tyre)}${hv.u.pit?" + pit":""}</text>
+        <text x="8" y="48">Base ${fmtLap(hv.b.tyre)} (${fmtDelta(hv.u.tyre-hv.b.tyre)} s)</text>
+      </g></g>` : null}
+  </svg>`;
+}
+
+function GapChart({ track, user, base, hover }){
+  const W=640, H=130, pl=48, pr=12, pt=10, pb=22, L=track.laps;
+  const gaps = user.laps.map((l,i)=>l.cum - base.laps[i].cum);
+  const m = Math.max(1, ...gaps.map(Math.abs))*1.1;
+  const x = lap => pl + (lap-1)/(L-1)*(W-pl-pr);
+  const y = v => pt + (m-v)/(2*m)*(H-pt-pb);
+  const line = gaps.map((g,i)=>`${i?"L":"M"}${x(i+1).toFixed(1)},${y(g).toFixed(1)}`).join("");
+  const area = (sign) => `M${x(1)},${y(0)}` + gaps.map((g,i)=>`L${x(i+1).toFixed(1)},${y(sign>0?Math.max(g,0):Math.min(g,0)).toFixed(1)}`).join("") + `L${x(L)},${y(0)}Z`;
+  return html`<svg viewBox=${`0 0 ${W} ${H}`} role="img" aria-label="Running gap to the baseline">
+    <path d=${area(1)} fill="var(--bad)" opacity="0.25"/>
+    <path d=${area(-1)} fill="var(--good)" opacity="0.25"/>
+    <line x1=${pl} x2=${W-pr} y1=${y(0)} y2=${y(0)} stroke="var(--muted)"/>
+    <path d=${line} fill="none" stroke="var(--user)" strokeWidth="1.6"/>
+    <text x=${pl-6} y=${y(m*0.8)+4} textAnchor="end">+${(m*0.8).toFixed(0)}s</text>
+    <text x=${pl-6} y=${y(0)+4} textAnchor="end">0</text>
+    <text x=${pl-6} y=${y(-m*0.8)+4} textAnchor="end">\u2212${(m*0.8).toFixed(0)}s</text>
+    <text x=${W-pr} y=${pt+10} textAnchor="end">behind baseline</text>
+    <text x=${W-pr} y=${H-pb-4} textAnchor="end">ahead of baseline</text>
+    ${hover ? html`<g><line x1=${x(hover)} x2=${x(hover)} y1=${pt} y2=${H-pb} stroke="var(--muted)"/><circle cx=${x(hover)} cy=${y(gaps[hover-1])} r="3.5" fill="var(--user)"/>
+      <text x=${Math.min(x(hover)+6, W-pr-60)} y=${y(gaps[hover-1])-6} style=${{fill:"var(--text)",fontWeight:700}}>${fmtDelta(gaps[hover-1])} s</text></g>` : null}
+  </svg>`;
+}
+
+function App(){
+  const [trackId, setTrackId] = useState("lasvegas");
+  const [driverId, setDriverId] = useState("verstappen");
+  const [stops, setStops] = useState(1);
+  const [compounds, setCompounds] = useState(["M","H","S"]);
+  const [pits, setPits] = useState(defaultPits(50,1).concat([35]));
+  const [hover, setHover] = useState(null);
+  const [best, setBest] = useState(null);
+  const [sample, setSample] = useState(null);
+  const [ai, setAi] = useState({ status:"idle", text:"" });
+  const [multOverride, setMultOverride] = useState(null);
+
+  const track = CONFIG.tracks[trackId], driver = CONFIG.drivers[driverId], L = track.laps;
+  const mult = multOverride ?? driver.mult;
+  const plan = { compounds: compounds.slice(0, stops+1), pits: pits.slice(0, stops) };
+  const errors = validate(track, plan);
+  const oneCompound = new Set(plan.compounds).size < 2;
+
+  const base = useMemo(()=>simulate(track, mult, baselinePlan(track)), [trackId, mult]);
+  const user = useMemo(()=> errors.length ? null : simulate(track, mult, plan), [trackId, mult, stops, plan.compounds.join(), plan.pits.join(), errors.length]);
+  const delta = user ? user.total - base.total : 0;
+
+  useEffect(()=>{ let alive=true;
+    if (window.claude && window.claude.use) window.claude.use("sample").then(s=>{ if(alive && s) setSample(()=>s); }).catch(()=>{});
+    return ()=>{ alive=false; }; }, []);
+  useEffect(()=>{ setBest(null); setAi({status:"idle",text:""}); }, [trackId, mult]);
+  useEffect(()=>{ setMultOverride(null); }, [driverId]);
+
+  const pickTrack = id => { const t = CONFIG.tracks[id]; setTrackId(id); setPits(stops===1 ? defaultPits(t.laps,1).concat([Math.round(t.laps*0.7)]) : defaultPits(t.laps,2)); setHover(null); };
+  const pickStops = n => { setStops(n); setPits(defaultPits(L, n).concat(n===1?[Math.round(L*0.7)]:[])); };
+  const setPit = (i, v) => { const n = parseInt(v,10); const next = pits.slice(); next[i] = Number.isNaN(n) ? 0 : n; setPits(next); };
+  const setComp = (i, c) => { const next = compounds.slice(); next[i] = c; setCompounds(next); };
+  const runOpt = () => setBest({ ...optimise(track, mult), key: trackId+mult });
+  const applyPlan = p => { setStops(p.pits.length); const c = p.compounds.concat(["S","S","S"]).slice(0,3); setCompounds(c); setPits(p.pits.length===1 ? p.pits.concat([Math.min(L-1,p.pits[0]+10)]) : p.pits.slice()); };
+  const bestOne = best ? simulate(track, mult, best.one) : null;
+  const bestTwo = best ? simulate(track, mult, best.two) : null;
+
+  const ask = async () => {
+    if (!sample || !user) return;
+    setAi({ status:"thinking", text:"" });
+    const prompt = `You are an F1 race strategist on the pit wall. Assess this strategy in 3-4 crisp sentences for a knowledgeable fan. Plain text, no markdown, no lists. Use only the numbers given; it is a simplified deterministic model with no safety cars or traffic.
+Track: ${track.name} (${track.gp}), ${L} laps, pit loss ${track.pitLoss}s, ${track.wear}. Compounds: Soft ${track.alloc.S}, Medium ${track.alloc.M}, Hard ${track.alloc.H}. Cliff laps: S ${track.cliff.S}, M ${track.cliff.M}, H ${track.cliff.H}.
+Driver: ${driver.name}, tyre-wear multiplier ${mult}.
+User strategy: ${planLabel(plan)}, total ${fmtRace(user.total)}.
+Baseline: ${planLabel(baselinePlan(track))}, total ${fmtRace(base.total)}. Delta ${fmtDelta(delta)}s.
+${best && best.key===trackId+mult ? `Model-optimal one-stop: ${planLabel(best.one)} ${fmtRace(bestOne.total)}; two-stop: ${planLabel(best.two)} ${fmtRace(bestTwo.total)}.` : ""}
+Real 2026 context: ${track.upcoming ? "Race not yet run (scheduled "+track.date+")." : "Winner "+(track.winner||"not in data")+"."} ${track.story||""} ${track.pirelli||""} Compound allocation status: ${track.allocStatus}.
+Say what the strategy gets right or wrong, and one concrete change to try, and mention how a Safety Car could change the call.`;
+    try {
+      const r = await sample(prompt, { modelTier:"quick", onText: ({text}) => setAi({ status:"streaming", text }) });
+      setAi({ status:"done", text: r.text });
+    } catch (e) {
+      if (e && e.code === "not_granted") { setSample(null); setAi({status:"idle",text:""}); }
+      else setAi({ status:"error", text: e && e.code==="rate_limited" ? "Too many requests just now. Try again in a minute." : "The strategist couldn’t answer. Try again." });
+    }
+  };
+
+  const multBadge = m => html`<span className=${"badge "+(m<1?"lo":m>1?"hi":"")}>${m.toFixed(2)}× deg</span>`;
+
+  return html`<div className="wrap">
+    <header className="top">
+      <div className="brand"><h1>Pit Wall</h1><span>2026 F1 strategy simulator</span></div>
+      <p className="snapshot"><b>Season data as of ${CONFIG.snapshotDate}.</b> ${CONFIG.season}</p>
+    </header>
+
+    <div className="grid">
+      <aside>
+        <section className="panel" aria-labelledby="h-track">
+          <h2 id="h-track">Track</h2>
+          <p className="help">All 23 rounds of 2026. Sets race distance, pit-lane loss and how hard the surface eats tyres.</p>
+          <select id="trk" aria-labelledby="h-track" value=${trackId} onChange=${e=>pickTrack(e.target.value)} style=${{width:"100%"}}>
+            ${RAW_TRACKS.map(t=>html`<option key=${t.id} value=${t.id}>R${t.rd} ${t.gp} (${t.circuit})${t.upcoming?" · upcoming":""}</option>`)}
+          </select>
+          <div className="trackcard">
+            <div><b>${track.laps}</b><span>laps</span></div>
+            <div><b>${track.pitLoss.toFixed(1)} s</b><span>pit loss</span></div>
+            <div><b>${track.wear}</b><span>severity ${track.sev}/5</span></div>
+            <div><b>${track.alloc.H}–${track.alloc.S}</b><span>${track.allocStatus==="confirmed"?"confirmed allocation":"estimated allocation"}</span></div>
+          </div>
+          <div className="strip" role="group" aria-label="Jump to round">
+            ${RAW_TRACKS.map(t=>html`<button key=${t.id} className=${"rd"+(t.upcoming?" up":"")} aria-pressed=${trackId===t.id} title=${t.gp} onClick=${()=>pickTrack(t.id)}>${t.rd}</button>`)}
+          </div>
+        </section>
+
+        <section className="panel" aria-labelledby="h-drv">
+          <h2 id="h-drv">Driver</h2>
+          <p className="help">Scales tyre degradation. Below 1.00 the driver is easier on the rubber. Profiles are illustrative; tune them with the slider.</p>
+          <select aria-labelledby="h-drv" value=${driverId} onChange=${e=>setDriverId(e.target.value)} style=${{width:"100%"}}>
+            ${CONFIG.teams.map(team=>html`<optgroup key=${team} label=${team}>
+              ${Object.entries(CONFIG.drivers).filter(([,d])=>d.team===team).map(([id,d])=>html`<option key=${id} value=${id}>${d.num!=null?"#"+d.num+" ":""}${d.name} (${d.mult.toFixed(2)}×)</option>`)}
+            </optgroup>`)}
+          </select>
+          <div className="drv" style=${{marginTop:"10px"}}>
+            <span><span className="t">${driver.name}</span><span className="s">${driver.team}${driver.num!=null?", #"+driver.num:""}${driver.standing?", "+driver.standing:""}</span></span>
+            ${multBadge(mult)}
+          </div>
+          <div className="row" style=${{marginTop:"10px",marginBottom:0}}>
+            <label htmlFor="mult">Tyre mgmt</label>
+            <input id="mult" type="range" min="0.85" max="1.15" step="0.01" value=${mult} onInput=${e=>setMultOverride(+e.target.value)} onChange=${e=>setMultOverride(+e.target.value)}/>
+            ${multOverride!=null ? html`<button className="btn ghost" style=${{padding:"2px 10px",minHeight:"30px"}} onClick=${()=>setMultOverride(null)}>Reset</button>` : null}
+          </div>
+        </section>
+
+        <section className="panel" aria-labelledby="h-cmp">
+          <h2 id="h-cmp">Compounds at ${track.name}</h2>
+          <p className="help">Pace offset against the Soft, wear per lap of age, and the age where wear accelerates ${CONFIG.cliffMultiplier}×.</p>
+          <table className="cmp">
+            <thead><tr><th>Compound</th><th>Pace</th><th>Deg/lap</th><th>Cliff</th></tr></thead>
+            <tbody>${C_KEYS.map(c=>html`<tr key=${c}><td><span className=${"chip "+c}></span>${CONFIG.compounds[c]} ${track.alloc[c]}</td>
+              <td>${track.offset[c]?"+"+track.offset[c].toFixed(2):"0.00"} s</td><td>${(track.deg[c]*mult).toFixed(3)} s</td><td>lap ${track.cliff[c]}</td></tr>`)}</tbody>
+          </table>
+        </section>
+
+        <section className="panel" aria-labelledby="h-str">
+          <h2 id="h-str">Your strategy</h2>
+          <p className="help">Pick the number of stops, each stint’s tyre and the lap you pit at the end of it.</p>
+          <div className="seg cols3" style=${{gridTemplateColumns:"1fr 1fr",marginBottom:"12px"}}>
+            ${[1,2].map(n=>html`<button key=${n} className="opt" aria-pressed=${stops===n} onClick=${()=>pickStops(n)}><span className="t">${n===1?"One stop":"Two stops"}</span></button>`)}
+          </div>
+          ${Array.from({length: stops+1}).map((_,i)=>html`<div className="stint" key=${i} style=${{borderLeftColor: compounds[i]==="S"?"var(--soft)":compounds[i]==="M"?"var(--medium)":"var(--hard-edge)"}}>
+            <div className="row"><label htmlFor=${"c"+i}>Stint ${i+1}</label>
+              <select id=${"c"+i} value=${compounds[i]} onChange=${e=>setComp(i,e.target.value)}>
+                ${C_KEYS.map(c=>html`<option key=${c} value=${c}>${CONFIG.compounds[c]} (${track.alloc[c]})</option>`)}
+              </select></div>
+            ${i<stops ? html`<div className="row"><label htmlFor=${"p"+i}>Pit lap</label>
+              <input type="range" min="1" max=${L-1} value=${Math.min(L-1,Math.max(1,pits[i]||1))} onInput=${e=>setPit(i,e.target.value)} onChange=${e=>setPit(i,e.target.value)} aria-label=${"Pit lap for stop "+(i+1)}/>
+              <input id=${"p"+i} type="number" min="1" max=${L-1} value=${pits[i]} onChange=${e=>setPit(i,e.target.value)}/></div>` : null}
+          </div>`)}
+          ${errors.map(e=>html`<p className="err" key=${e} role="alert">${e}</p>`)}
+          ${!errors.length && oneCompound ? html`<p className="warn">Dry-race rules require two different compounds. This plan would be disqualified; the time is shown for comparison only.</p>` : null}
+          <div style=${{display:"flex",gap:"8px",flexWrap:"wrap",marginTop:"12px"}}>
+            <button className="btn ghost" onClick=${runOpt}>Find the model’s fastest strategy</button>
+          </div>
+          ${best && best.key===trackId+mult ? html`<div className="best">
+            <div><b>Best one-stop:</b> ${planLabel(best.one)}, ${fmtDelta(bestOne.total-base.total)} s vs baseline <button className="btn ghost" style=${{padding:"2px 10px",minHeight:"30px",marginLeft:"6px"}} onClick=${()=>applyPlan(best.one)}>Use</button></div>
+            <div style=${{marginTop:"6px"}}><b>Best two-stop:</b> ${planLabel(best.two)}, ${fmtDelta(bestTwo.total-base.total)} s vs baseline <button className="btn ghost" style=${{padding:"2px 10px",minHeight:"30px",marginLeft:"6px"}} onClick=${()=>applyPlan(best.two)}>Use</button></div>
+          </div>` : null}
+        </section>
+      </aside>
+
+      <main>
+        <section className="panel" aria-live="polite">
+          ${user ? html`<${React.Fragment}><div className="hero">
+              <div className=${"delta "+(Math.abs(delta)<0.005?"even":delta<0?"good":"bad")}>${fmtDelta(delta)}<small>s</small></div>
+              <dl className="times">
+                <dt>Your race</dt><dd>${fmtRace(user.total)}</dd>
+                <dt>Baseline</dt><dd>${fmtRace(base.total)}</dd>
+                <dt>Baseline plan</dt><dd style=${{fontWeight:400}}>${planLabel(baselinePlan(track))}</dd>
+              </dl>
+            </div>
+            <p className="verdict">${verdict(track, user, base)}</p><//>`
+          : html`<p className="err" style=${{fontSize:"16px"}}>Fix the pit laps on the left to see the projection. The baseline is unchanged at ${fmtRace(base.total)}.</p>`}
+        </section>
+
+        ${user ? html`<${React.Fragment}><section className="panel">
+          <h2>Stint timeline</h2>
+          <p className="help">Red markers are pit stops. Hatching shows laps run past a compound’s cliff.</p>
+          <div className="chart-wrap"><${Timeline} track=${track} rows=${[{label:"You",stints:user.stints},{label:"Baseline",stints:base.stints}]}/></div>
+        </section>
+
+        <section className="panel">
+          <h2>Lap-by-lap pace</h2>
+          <p className="help">Tyre-limited lap time without pit loss. Green fill is where you’re quicker, red where the baseline is. Hover or drag for detail.</p>
+          <div className="chart-wrap"><${PaceChart} track=${track} user=${user} base=${base} hover=${hover} setHover=${setHover}/></div>
+          <div className="legend"><span><i style=${{borderColor:"var(--user)"}}></i>Your strategy</span><span><i style=${{borderColor:"var(--base)",borderTopStyle:"dashed"}}></i>Baseline</span><span><i style=${{borderColor:"var(--accent)",borderTopStyle:"dashed"}}></i>Your stops</span></div>
+          <h2 style=${{marginTop:"16px"}}>Running gap</h2>
+          <p className="help">Cumulative race time against the baseline, pit stops included.</p>
+          <div className="chart-wrap"><${GapChart} track=${track} user=${user} base=${base} hover=${hover}/></div>
+        </section><//>` : null}
+
+        <section className="panel ctx">
+          <h2>${track.upcoming ? track.gp+" is still to come" : "What happened at "+track.gp+" in 2026"}</h2>
+          <p className="meta">Round ${track.rd}, ${track.circuit}, ${track.date} 2026. ${track.upcoming ? "Not yet raced." : "Winner: "+(track.winner || "not included in this snapshot")+"."} Allocation: Hard ${track.alloc.H}, Medium ${track.alloc.M}, Soft ${track.alloc.S}${track.allocStatus==="confirmed"?"":" (estimate: not confirmed in this snapshot)"}.${track.sprint?" Sprint weekend.":""}</p>
+          ${track.story ? html`<p>${track.story}</p>` : null}
+          ${track.pirelli ? html`<p>${track.pirelli}</p>` : null}
+          <p className="meta">${track.tuned ? "Tyre physics here are hand-tuned to Pirelli’s published strategy expectations." : "Tyre physics here are derived from the wear severity and compound C-numbers; see CONFIG.derive."}</p>
+          ${sample && user ? html`<div style=${{marginTop:"12px"}}>
+            <button className="btn" onClick=${ask} disabled=${ai.status==="thinking"||ai.status==="streaming"}>${ai.status==="thinking"?"Thinking…":ai.status==="streaming"?"Answering…":"Ask the strategist about my plan"}</button>
+            ${ai.text ? html`<p className="ai">${ai.text}</p>` : null}
+          </div>` : null}
+        </section>
+
+        <section className="panel">
+          <details>
+            <summary>Assumptions and limits of the model</summary>
+            <ul>
+              <li>Deterministic: no random noise, so every result is reproducible.</li>
+              <li>No Safety Cars, VSCs or red flags. All three 2026 races here were shaped by neutralisations the model ignores.</li>
+              <li>No traffic, no dirty air, no overtake-mode battles, and no track-position value from pitting earlier or later than rivals.</li>
+              <li>Degradation is linear in tyre age until the cliff, then ${CONFIG.cliffMultiplier}× steeper. No warm-up penalty on out-laps.</li>
+              <li>Fuel effect falls linearly from +${CONFIG.fuelEffectStart} s on lap 1 to zero at the flag.</li>
+              <li>Pit loss is a fixed per-track constant added to the in-lap. Base pace, wear rates, cliffs and pit losses are estimates, not timing data.</li>
+              <li>Driver multipliers are illustrative profiles, not measured tyre-management figures.</li>
+              <li>Monaco, Silverstone and Monza are hand-tuned to Pirelli’s published strategy calls. The other 20 rounds derive wear, cliffs and pace gaps from a 1–5 severity rating and each compound’s C-number.</li>
+              <li>Seven allocations (Australia, Miami, Austria, Belgium, Las Vegas, Qatar, Abu Dhabi) weren’t confirmed in this snapshot and use the 2025 pattern.</li>
+              <li>Season facts are a snapshot from ${CONFIG.snapshotDate}; the page doesn’t refresh them on its own.</li>
+            </ul>
+          </details>
+        </section>
+
+        <section className="panel sources">
+          <b style=${{color:"var(--text)"}}>Sources for season data</b>
+          <ul style=${{margin:"6px 0 0",paddingLeft:"18px"}}>${CONFIG.sources.map(([t,u])=>html`<li key=${u}><a href=${u} target="_blank" rel="noopener noreferrer">${t}</a></li>`)}</ul>
+        </section>
+      </main>
+    </div>
+  </div>`;
+}
+
+try {
+  ReactDOM.createRoot(document.getElementById("root")).render(html`<${App}/>`);
+} catch (e) {
+  document.getElementById("root").innerHTML = '<div class="wrap"><p>The simulator failed to start: ' + String(e.message).replace(/</g,"&lt;") + '</p></div>';
+}
+</script>
+</body>
+</html>
